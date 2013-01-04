@@ -1,0 +1,32 @@
+#!/bin/bash -e
+
+source $(dirname "$0")/../etc/config
+mkdir -p "$repodir"
+for f in $(ls -v "$arcdir"); do
+  tarball=$(readlink -f "$arcdir/$f")
+  bn=$(basename "$f")
+  namever=${bn%%.t*}
+  ver=${namever#*-}
+  name=${bn%%-*}
+  gitdir="$repodir"/$name.git
+  gitdirnice=$(readlink -f "$gitdir"); gitdirnice=${gitdirnice#$PWD/}
+  if ! [[ -d "$gitdir" ]]; then
+    echo "*** Initializing new git repo $gitdirnice"
+    git --git-dir="$gitdir" init --bare
+  fi
+  if (git --git-dir="$gitdir" tag -l v$ver | grep v$ver >&/dev/null); then
+    echo "*** $name $ver found in $gitdirnice"
+  else
+    echo "*** Adding contents of $f to git repo at $gitdirnice"
+    d=$(mktemp -d)
+    tar -x -C "$d" --strip-components=1 -f "$tarball"
+    export GIT_AUTHOR_DATE=$(stat -c %y "$tarball")
+    export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
+    opts=(--git-dir="$gitdir" --work-tree="$d")
+    git "${opts[@]}" add -A
+    sha1=$(cd "$arcdir"; sha1sum -b "$f")
+    git "${opts[@]}" commit --author="$author" -m "Release version $ver"$'\n\nUsing tarball (with SHA1):\n'"$sha1"
+    git "${opts[@]}" tag -a v$ver -m "Version $ver"
+    rm -rf "$d"
+  fi
+done

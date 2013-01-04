@@ -1,0 +1,6 @@
+basedir=$(dirname "$0")/..
+arcdir=$basedir/tarballs
+repodir=$basedir/repos
+mirrorbase=git@github.com:KeckCAVES
+tarballbase=http://stout.idav.ucdavis.edu
+author="Oliver Kreylos <kreylos@cs.ucdavis.edu>"

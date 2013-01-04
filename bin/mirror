@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+source $(dirname "$0")/../etc/config
+for g in "$repodir"/*.git; do
+  mirrorurl="$mirrorbase/${g##*/}"
+  echo "*** Mirroring to $mirrorurl"
+  git --git-dir="$g" push --mirror "$mirrorurl"
+done
