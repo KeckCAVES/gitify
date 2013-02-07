@@ -1,28 +1,28 @@
 #!/bin/bash -e
 
-source $(dirname "$0")/../etc/config
+source "$(dirname "$0")"/../etc/config
 mkdir -p "$arcdir"
 cd "$arcdir"
-dl=()
-software=($(ls | cut -d - -f 1 | sort -u))
-while ((${#software})); do
-  name=${software[0]}
-  latest=$(ls -v $name* | tail -n 1)
-  if [[ $latest =~ ^[^-]*-([^.]*)\.([^.-]*)-?([^.]*)(.*)$ ]]; then
-    maj=${BASH_REMATCH[1]}
-    min=${BASH_REMATCH[2]}
-    rev=${BASH_REMATCH[3]}
-    suf=${BASH_REMATCH[4]}
-  else
-    echo "Unable to parse filename: $latest"
-    exit 1
-  fi
-  [[ -n $rev ]] && f=$name-$maj.$min-$(printf %0${#rev}i $((rev+1)))$suf && wget "$tarballbase"/$f && dl+=($f) || {
-    [[ -n $rev ]] && r=-$(printf %0${#rev}i 1) || r=
-    f=$name-$maj.$(($min+1))$r$suf; wget "$tarballbase"/$f && dl+=($f) || {
-      f=$name-$((maj+1)).0$r$suf; wget "$tarballbase"/$f && dl+=($f) ||
-        software=(${software[@]:1})
+
+for name in "${names[@]}"; do
+  echo "Scanning for $name..."
+  scrape=scrape_$name; scrape=${!scrape}
+  file=file_$name; file=${!file}
+  locs=$(wget -q -O - "$scrape" | grep -o -i 'href="[^"]*' | sed 's/^[^"]*"//' | grep -E "$file")
+  for loc in $locs; do
+    case "$loc" in
+      *://*) url=$loc;;
+      /*) url=${scrape%://*}://$loc;;
+      *) url=${scrape%/*}/$loc;;
+    esac
+    wget -nv -N --spider "$url" 2>&1 | grep ' OK$' >&/dev/null && {
+      f=${loc##*/}
+      [[ -e "$f" ]] && { [[ -L "$f" ]] || { mv "$f" "$f".0; ln -s "$f".0 "$f"; }; }
+      wget "$url"
+      dup=$(ls -v | grep ^"$f"'\.[0-9]*$' | tail -n 1)
+      [[ -n "$dup" ]] && ln -sf "$dup" "${dup%.*}"
     }
-  }
+  done
 done
-echo "downloaded: ${dl[@]}"
+
+echo "Done."

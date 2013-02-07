@@ -2,31 +2,41 @@
 
 source $(dirname "$0")/../etc/config
 mkdir -p "$repodir"
-for f in $(ls -v "$arcdir"); do
-  tarball=$(readlink -f "$arcdir/$f")
-  bn=$(basename "$f")
-  namever=${bn%%.t*}
-  ver=${namever#*-}
-  name=${bn%%-*}
-  gitdir="$repodir"/$name.git
+for n in "${names[@]}"; do
+  echo "::: Working on $n..."
+  file=file_$n; file=${!file}
+  gitdir=$repodir/$n.git
   gitdirnice=$(readlink -f "$gitdir"); gitdirnice=${gitdirnice#$PWD/}
   if ! [[ -d "$gitdir" ]]; then
-    echo "*** Initializing new git repo $gitdirnice"
+    echo ":::   Initializing new git repo $gitdirnice"
     git --git-dir="$gitdir" init --bare
   fi
-  if (git --git-dir="$gitdir" tag -l v$ver | grep v$ver >&/dev/null); then
-    echo "*** $name $ver found in $gitdirnice"
-  else
-    echo "*** Adding contents of $f to git repo at $gitdirnice"
-    d=$(mktemp -d)
-    tar -x -C "$d" --strip-components=1 -f "$tarball"
-    export GIT_AUTHOR_DATE=$(stat -c %y "$tarball")
-    export GIT_COMMITTER_DATE=$GIT_AUTHOR_DATE
-    opts=(--git-dir="$gitdir" --work-tree="$d")
-    git "${opts[@]}" add -A
-    sha1=$(cd "$arcdir"; sha1sum -b "$f")
-    git "${opts[@]}" commit --author="$author" -m "Release version $ver"$'\n\nUsing tarball (with SHA1):\n'"$sha1"
-    git "${opts[@]}" tag -a v$ver -m "Version $ver"
-    rm -rf "$d"
-  fi
+  tarballs=(); while read x; do x=$arcdir/$x;
+    [[ -L "$x" && "$(readlink "$x")" =~ \.[0-9]+$ ]] || {
+      [[ -L "$x" ]] && x=$(readlink -f "$x")
+      tarballs+=("$x"); }
+  done <<<"$(ls -v "$arcdir" | grep -E ^"$file"'(\.[0-9]+)?$')"
+  for t in "${tarballs[@]}"; do
+    bn=$(basename "$t")
+    [[ "$bn" =~ ^$file(\.[0-9]+)?$ ]] && ver=${BASH_REMATCH[1]} && rev=${BASH_REMATCH[2]:1} || {
+      echo "::: Error: cannot parse version from $bn using regular expression $file"; exit 1; }
+    tagver=v$ver; (( rev > 0 && ++rev )) && tagver+=r$rev
+    verinfo=$ver; (( rev > 1 )) && verinfo+=" revision $rev"
+    if (git --git-dir="$gitdir" tag -l $tagver | grep $tagver >&/dev/null); then
+      echo ":::   Version $verinfo found in $gitdirnice"
+    else
+      echo ":::   Adding contents of $t as version $verinfo to git repo $gitdirnice"
+      d=$(mktemp -d)
+      tar -x -C "$d" --strip-components=1 -f "$t"
+      export GIT_AUTHOR_DATE=$(tar --full-time -tvf "$t" |
+        sed 's/^.*\(20[0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*$/\1/p;d' | sort | tail -n 1)
+      opts=(--git-dir="$gitdir" --work-tree="$d")
+      git "${opts[@]}" add -A
+      sha1=$(cd "$arcdir"; sha1sum -b "$(basename "$t")" | sed 's/\.[0-9]*$//')
+      git "${opts[@]}" commit --author="$author" -m "Release version $verinfo"$'\n\nUsing tarball (with SHA1):\n'"$sha1"
+      git "${opts[@]}" tag -a $tagver -m "Version $verinfo"
+      rm -rf "$d"
+    fi
+  done
 done
+echo "::: Done!"

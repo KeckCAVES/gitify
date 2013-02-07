@@ -1,6 +1,32 @@
-basedir=$(dirname "$0")/..
-arcdir=$basedir/tarballs
-repodir=$basedir/repos
-mirrorbase=git@github.com:KeckCAVES
-tarballbase=http://stout.idav.ucdavis.edu
+_d=$(dirname "$0")/..
+arcdir=$_d/archives
+repodir=$_d/repos
+
+names=(Vrui CollaborationInfrastructure LidarViewer 3DVisualizer NCK Kinect SARndbox)
+
+_url=http://www.idav.ucdavis.edu/~okreylos/ResDev
+
+file_Vrui='Vrui-(.*)\.tar\.gz'
+scrape_Vrui=$_url/Vrui/Download.html
+
+file_CollaborationInfrastructure='CollaborationInfrastructure-(.*)\.tar\.gz'
+scrape_CollaborationInfrastructure=$_url/Collaboration/Download.html
+
+file_LidarViewer='LidarViewer-(.*).tar.gz'
+scrape_LidarViewer=$_url/LiDAR/Download.html
+
+file_3DVisualizer='3DVisualizer-(.*).tar.gz'
+scrape_3DVisualizer=$_url/DataExploration/Download.html
+
+file_NCK='NCK-(.*).tar.gz'
+scrape_NCK=$_url/NanoTech/Download.html
+
+file_Kinect='Kinect-(.*).tar.gz'
+scrape_Kinect=$_url/Kinect/Download.html
+
+file_SARndbox='SARndbox-(.*).tar.gz'
+scrape_SARndbox=$_url/SARndbox/Download.html
+
 author="Oliver Kreylos <kreylos@cs.ucdavis.edu>"
+
+mirror=git@github.com:KeckCAVES/%s.git
