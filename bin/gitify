@@ -28,6 +28,7 @@ for n in "${names[@]}"; do
       echo ":::   Adding contents of $t as version $verinfo to git repo $gitdirnice"
       d=$(mktemp -d)
       tar -x -C "$d" --strip-components=1 -f "$t"
+      find "$d" -type d -empty -exec touch '{}'/.gitkeep \;
       export GIT_AUTHOR_DATE=$(tar --full-time -tvf "$t" |
         sed 's/^.*\(20[0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*$/\1/p;d' | sort | tail -n 1)
       opts=(--git-dir="$gitdir" --work-tree="$d")
