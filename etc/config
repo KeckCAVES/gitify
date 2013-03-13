@@ -1,6 +1,6 @@
 _d=$(dirname "$0")/..
-arcdir=$_d/archives
-repodir=$_d/repos
+arcdir=$_d/var/archives
+repodir=$_d/var/repos
 
 names=(Vrui CollaborationInfrastructure LidarViewer 3DVisualizer NCK Kinect SARndbox)
 
